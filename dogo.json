@@ -1,7 +1,7 @@
 {
-    "WorkingDir": "{GOPATH}/src/gopl.io/ch1/harmonograph",
+    "WorkingDir": "{GOPATH}/src/github.com/libliflin/harmonograph",
     "SourceDir": [
-        "{GOPATH}/src/gopl.io/ch1/harmonograph"
+        "{GOPATH}/src/github.com/libliflin/harmonograph"
     ],
     "SourceExt": [".go", ".html"],
     "BuildCmd": "go build",
