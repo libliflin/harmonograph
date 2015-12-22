@@ -1,0 +1,10 @@
+{
+    "WorkingDir": "{GOPATH}/src/gopl.io/ch1/harmonograph",
+    "SourceDir": [
+        "{GOPATH}/src/gopl.io/ch1/harmonograph"
+    ],
+    "SourceExt": [".go", ".html"],
+    "BuildCmd": "go build",
+    "RunCmd": "harmonograph.exe",
+    "Decreasing": 1
+}

@@ -44,51 +44,46 @@ window.onerror = function(msg, url, line, col, error) {
 		])
 	);
 };
+</script>
+<script>
 
-// elves: mithirl helpers
+// elves: mithril helpers
 var elves = {};
 
-elves.inp = function(s, p){
- return [s, 
- 	m("input", {onchange: m.withAttr("value", p), value: p()}),
- 	m("br")
- 	];
+elves.inp = function(p){
+	return elves.inp2(p, "10", "50", "1");
 }
+
+elves.inp2 = function(p, mi, ma, st){
+	return m("td", elves.inp3(p, mi, ma, st) );
+}
+elves.inp3 = function(p, mi, ma, st){
+	return m("input", {type: "range", min: mi, max: ma, step: st, onchange: m.withAttr("value", p), value: p()});
+}
+
 </script>
 <script>
 var h = {};
 
-h.GifSettings = function(data){
-	this.pixelWidth      = m.prop(data.pixelWidth);
-	this.pixelHeight     = m.prop(data.pixelHeight);
-	this.delay           = m.prop(data.delay);           // units == 10ms
-	this.animationFrames = m.prop(data.animationFrames);
-};
-
-h.GifFrameSettings = function(data){
-	this.MaxTime     = m.prop(data.MaxTime);
-	this.Resolution  = m.prop(data.Resolution);
-};
-
 h.d = {};
 
-h.d.X1A = m.prop(1.0);
-h.d.X1p = m.prop(1.0);
-h.d.X1f = m.prop(1.0);
-h.d.X1d = m.prop(0.1);
-h.d.X2A = m.prop(1.0);
-h.d.X2p = m.prop(1.0);
-h.d.X2f = m.prop(1.0);
+h.d.X1A = m.prop(50.0);
+h.d.X1p = m.prop(16.0);
+h.d.X1f = m.prop(20.0);
+h.d.X1d = m.prop(0.31);
+h.d.X2A = m.prop(24.0);
+h.d.X2p = m.prop(15.0);
+h.d.X2f = m.prop(10.0);
 h.d.X2d = m.prop(0.1);
-h.d.Y1A = m.prop(1.0);
-h.d.Y1p = m.prop(1.0);
-h.d.Y1f = m.prop(1.0);
+h.d.Y1A = m.prop(34.0);
+h.d.Y1p = m.prop(10.0);
+h.d.Y1f = m.prop(10.0);
 h.d.Y1d = m.prop(0.1);
-h.d.Y2A = m.prop(1.0);
-h.d.Y2p = m.prop(1.0);
-h.d.Y2f = m.prop(1.0);
+h.d.Y2A = m.prop(16.0);
+h.d.Y2p = m.prop(10.0);
+h.d.Y2f = m.prop(10.0);
 h.d.Y2d = m.prop(0.1);
-h.d.tmax = m.prop(8.0);
+h.d.tmax = m.prop(40.0);
 
 
 
@@ -97,10 +92,10 @@ h.controller = function() {
     // do nothing, everything is harmogograph scoped
 }
 
-h.url = m.prop("/gif");
+h.url = m.prop("/png");
 
 h.getGIF = function(){
-	var url = "/gif";
+	var url = "/png";
 	url = url + "?X1A=" + encodeURIComponent(h.d.X1A());
   url = url + "&X1p=" + encodeURIComponent(h.d.X1p());
   url = url + "&X1f=" + encodeURIComponent(h.d.X1f());
@@ -118,38 +113,53 @@ h.getGIF = function(){
   url = url + "&Y2f=" + encodeURIComponent(h.d.Y2f());
   url = url + "&Y2d=" + encodeURIComponent(h.d.Y2d());
   url = url + "&tmax=" + encodeURIComponent(h.d.tmax());
-  h.url(url);
+  return url;
 };
-
-h.getGIF();
 
 //here's the view
 h.view = function() {
     return m("html", [
         m("body", [
-						elves.inp("X1 amplitude", h.d.X1A),
-						elves.inp("X1 phase",     h.d.X1p),
-						elves.inp("X1 frequency", h.d.X1f),
-						elves.inp("X1 damping",   h.d.X1d),
-						m("br"),
-						elves.inp("X2 amplitude", h.d.X2A),
-						elves.inp("X2 phase",     h.d.X2p),
-						elves.inp("X2 frequency", h.d.X2f),
-						elves.inp("X2 damping",   h.d.X2d),
-						m("br"),
-						elves.inp("Y1 amplitude", h.d.Y1A),
-						elves.inp("Y1 phase",     h.d.Y1p),
-						elves.inp("Y1 frequency", h.d.Y1f),
-						elves.inp("Y1 damping",   h.d.Y1d),
-						m("br"),
-						elves.inp("Y2 amplitude", h.d.Y2A),
-						elves.inp("Y2 phase",     h.d.Y2p),
-						elves.inp("Y2 frequency", h.d.Y2f),
-						elves.inp("Y2 damping",   h.d.Y2d),
-						m("br"),
-						elves.inp("max time",   h.d.tmax),
-            m("button", {onclick: h.getGIF}, "MakeGIF"),
-            m("img", {src: h.url()})
+            m("img", {src: h.getGIF()}),
+			m("table", [
+				m("tr", [
+					m("th", ""),
+					m("th", "Amplitude"),
+					m("th", "Phase"), 
+					m("th", "Frequency"),
+					m("th", "Damping")
+				]),
+				m("tr", [
+					m("th", "X1"),
+					m("td", elves.inp(h.d.X1A)),
+					m("td", elves.inp(h.d.X1p)),
+					m("td", elves.inp(h.d.X1f)),
+					m("td", elves.inp2(h.d.X1d, "0.1", "1.0", "0.01"))
+				]),
+				m("tr", [
+					m("th", "X2"),
+					m("td", elves.inp(h.d.X2A)),
+					m("td", elves.inp(h.d.X2p)),
+					m("td", elves.inp(h.d.X2f)),
+					m("td", elves.inp2(h.d.X2d, "0.1", "1.0", "0.01"))
+				]),
+				m("tr", [
+					m("th", "Y1"),
+					m("td", elves.inp(h.d.Y1A)),
+					m("td", elves.inp(h.d.Y1p)),
+					m("td", elves.inp(h.d.Y1f)),
+					m("td", elves.inp2(h.d.Y1d, "0.1", "1.0", "0.01"))
+				]),
+				m("tr", [
+					m("th", "Y2"),
+					m("td", elves.inp(h.d.Y2A)),
+					m("td", elves.inp(h.d.Y2p)),
+					m("td", elves.inp(h.d.Y2f)),
+					m("td", elves.inp2(h.d.Y2d, "0.1", "1.0", "0.01"))
+				]),
+			]),
+			"max time",
+			elves.inp2(h.d.tmax, "5", "100", "1")
         ])
     ]);
 };
