@@ -52,14 +52,28 @@ var elves = {};
 
 elves.inp = function(p){
 	return elves.inp2(p, "10", "300", "1");
-}
+};
+
+elves.inpp = function(p){
+	var mathpi = (2 * Math.PI).toString();
+	return elves.inp2(p,  "0", mathpi, "0.01");
+};
+
+elves.inpf = function(p){
+	return elves.inp2(p,  "0", "30", "0.1");
+};
+
+elves.inpd = function(p){
+	return elves.inp2(p, "0.1", "1.0", "0.01");
+};
 
 elves.inp2 = function(p, mi, ma, st){
 	return m("td", elves.inp3(p, mi, ma, st) );
-}
+};
+
 elves.inp3 = function(p, mi, ma, st){
 	return m("input", {type: "range", min: mi, max: ma, step: st, onchange: m.withAttr("value", p), value: p()});
-}
+};
 
 </script>
 <script>
@@ -67,21 +81,21 @@ var h = {};
 
 h.d = {};
 
-h.d.X1A = m.prop(50.0);
-h.d.X1p = m.prop(16.0);
-h.d.X1f = m.prop(20.0);
+h.d.X1A = m.prop(130.0);
+h.d.X1p = m.prop(1.571);
+h.d.X1f = m.prop(15.8);
 h.d.X1d = m.prop(0.31);
-h.d.X2A = m.prop(24.0);
-h.d.X2p = m.prop(15.0);
-h.d.X2f = m.prop(10.0);
+h.d.X2A = m.prop(220.0);
+h.d.X2p = m.prop(1.358);
+h.d.X2f = m.prop(15.0);
 h.d.X2d = m.prop(0.1);
-h.d.Y1A = m.prop(34.0);
-h.d.Y1p = m.prop(10.0);
-h.d.Y1f = m.prop(10.0);
+h.d.Y1A = m.prop(155.0);
+h.d.Y1p = m.prop(0);
+h.d.Y1f = m.prop(14.8);
 h.d.Y1d = m.prop(0.1);
-h.d.Y2A = m.prop(16.0);
-h.d.Y2p = m.prop(10.0);
-h.d.Y2f = m.prop(10.0);
+h.d.Y2A = m.prop(44.0);
+h.d.Y2p = m.prop(0);
+h.d.Y2f = m.prop(15.0);
 h.d.Y2d = m.prop(0.1);
 h.d.tmax = m.prop(40.0);
 
@@ -116,6 +130,7 @@ h.getGIF = function(){
   return url;
 };
 
+
 //here's the view
 h.view = function() {
     return m("html", [
@@ -132,30 +147,30 @@ h.view = function() {
 				m("tr", [
 					m("th", "X1"),
 					m("td", elves.inp(h.d.X1A)),
-					m("td", elves.inp(h.d.X1p)),
-					m("td", elves.inp(h.d.X1f)),
-					m("td", elves.inp2(h.d.X1d, "0.1", "1.0", "0.01"))
+					m("td", elves.inpp(h.d.X1p)),
+					m("td", elves.inpf(h.d.X1f)),
+					m("td", elves.inpd(h.d.X1d))
 				]),
 				m("tr", [
 					m("th", "X2"),
 					m("td", elves.inp(h.d.X2A)),
-					m("td", elves.inp(h.d.X2p)),
-					m("td", elves.inp(h.d.X2f)),
-					m("td", elves.inp2(h.d.X2d, "0.1", "1.0", "0.01"))
+					m("td", elves.inpp(h.d.X2p)),
+					m("td", elves.inpf(h.d.X2f)),
+					m("td", elves.inpd(h.d.X2d))
 				]),
 				m("tr", [
 					m("th", "Y1"),
 					m("td", elves.inp(h.d.Y1A)),
-					m("td", elves.inp(h.d.Y1p)),
-					m("td", elves.inp(h.d.Y1f)),
-					m("td", elves.inp2(h.d.Y1d, "0.1", "1.0", "0.01"))
+					m("td", elves.inp2(h.d.Y1p)),
+					m("td", elves.inpf(h.d.Y1f)),
+					m("td", elves.inpd(h.d.Y1d))
 				]),
 				m("tr", [
 					m("th", "Y2"),
 					m("td", elves.inp(h.d.Y2A)),
-					m("td", elves.inp(h.d.Y2p)),
-					m("td", elves.inp(h.d.Y2f)),
-					m("td", elves.inp2(h.d.Y2d, "0.1", "1.0", "0.01"))
+					m("td", elves.inpp(h.d.Y2p)),
+					m("td", elves.inpf(h.d.Y2f)),
+					m("td", elves.inpd(h.d.Y2d))
 				]),
 			]),
 			"max time",

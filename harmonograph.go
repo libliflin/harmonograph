@@ -3,7 +3,6 @@
 package main
 
 import (
-	"fmt"
 	"image"
 	"image/color"
 	"image/png"
@@ -58,66 +57,92 @@ func serveHarmonograph(w http.ResponseWriter, r *http.Request) {
 }
 
 func harmonograph(X1, X2, Y1, Y2 func(float64) float64, tmax float64, out io.Writer) {
+	parametricPlot(
+		func(t float64) float64 {
+			return X1(t) + X2(t)
+		},
+		func(t float64) float64 {
+			return Y1(t) + Y2(t)
+		},
+		0.0,
+		tmax,
+		out)
+}
+
+func parametricPlot(X, Y func(float64) float64, tmin, tmax float64, out io.Writer) {
 	const (
-		res       = 0.001 // angular resolution
-		size      = 300   // image canvas covers [-size..+size]
+		size      = 300 // image canvas covers [-size..+size]
 		alphaStep = 50
 	)
+
 	rect := image.Rect(0, 0, 2*size+1, 2*size+1)
+	rectSize := 2*size + 1.0
 	img := image.NewRGBA(rect)
 	for alx := 0; alx < 2*size+1; alx++ {
 		for aly := 0; aly < 2*size+1; aly++ {
 			img.SetRGBA(alx, aly, color.RGBA{0, 0, 0, 0})
 		}
 	}
-	printx := 0
-	printy := 0
-	maxPrint := 10
+	prevOutside := true
 	xprev := math.Inf(-1)
 	yprev := math.Inf(-1)
-
-	for t := 0.0; t < tmax; t += res {
-		x := size + X1(t) + X2(t)
-		if printx < maxPrint {
-			fmt.Printf("X: %#v\n", x)
-			printx++
+	resDefault := 0.01
+	allowedDifferenceMax := 2.0        // if two points are farther than allowedDifferenceMax apart, back up with a halved res
+	allowedDifferenceMin := .5         // if two points sare closer than allowedDifferenceMin apart, back up with a doubled res
+	allowedDifferenceMultiplier := 2.0 // if we are in a loop of allowed difference, do the max, then continue.
+	allowedDifferenceMaxSet := false
+	allowedDifferenceMinSet := false
+	res := resDefault
+	for t := tmin; t < tmax; t += res {
+		x := size + X(t)
+		y := size + Y(t)
+		if x < 0 || rectSize < x || y < 0 || rectSize < y {
+			prevOutside = true
 		}
-		if x > 2*size+1 {
-			xprev = math.Inf(-1)
-			yprev = math.Inf(-1)
-			continue
-		}
-		if x < 0 {
-			xprev = math.Inf(-1)
-			yprev = math.Inf(-1)
-			continue
-		}
-		y := size + Y1(t) + Y2(t)
-		if printy < maxPrint {
-			fmt.Printf("Y: %#v\n", y)
-			printy++
-		}
-		if y > 2*size+1 {
-			xprev = math.Inf(-1)
-			yprev = math.Inf(-1)
-			continue
-		}
-		if y < 0 {
-			xprev = math.Inf(-1)
-			yprev = math.Inf(-1)
-			continue
-		}
-		if xprev != math.Inf(-1) {
+		if !prevOutside {
+			d := distance(xprev, yprev, x, y)
+			if allowedDifferenceMax < d && allowedDifferenceMinSet {
+				//allowedDifferenceMinSet = false
+				//allowedDifferenceMultiplier += .1
+			} else if d < allowedDifferenceMin && allowedDifferenceMaxSet {
+				// do nothing..... we are in a loop.
+				// maybe we could possibly muck with the multiplier
+				//allowedDifferenceMaxSet = false
+				//allowedDifferenceMultiplier -= .1
+			} else {
+				if allowedDifferenceMax < d {
+					// back up
+					t -= res
+					// half res
+					res *= (1.0 / allowedDifferenceMultiplier)
+					//
+					allowedDifferenceMaxSet = true
+					continue
+				} else {
+					allowedDifferenceMaxSet = false
+				}
+				if d < allowedDifferenceMin {
+					// back up
+					t -= res
+					// double res
+					res *= allowedDifferenceMultiplier
+					allowedDifferenceMaxSet = true
+					continue
+				} else {
+					allowedDifferenceMinSet = false
+				}
+			}
 			xiolin_wu_draw_line(xprev, yprev, x, y, img)
 		}
 		xprev = x
 		yprev = y
+		prevOutside = false
 	}
 	png.Encode(out, img) // NOTE: ignoring encoding errors
 }
 
-func importance(x1, y1, x2, y2 float64) float64 {
-	return 1 - math.Sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2))
+func distance(x1, y1, x2, y2 float64) float64 {
+	return math.Sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2))
 }
 
 func dampedPendulum(frequency, phase, amplitude, damping float64) func(time float64) float64 {
@@ -190,15 +215,30 @@ func xiolin_wu_draw_line(x0, y0, x1, y1 float64, img *image.RGBA) {
 }
 
 func xiolin_plot(x, y, c float64, img *image.RGBA) {
-	al := saturating_add(float64(img.RGBAAt(int(x), int(y)).A), 255.0*c)
+	mahAlpha := 1.0
+	ex := float64(img.RGBAAt(int(x), int(y)).A)
+	ne := mahAlpha * 255.0 * c
+	//al := saturating_add(ex, ne)
+	//al := uint8(ne)
+	//al := add_little_to_max(ex, ne)
+	al := get_max(ex, ne)
+
 	img.SetRGBA(int(x), int(y), color.RGBA{al, 0, 0, al})
 }
 
-func saturating_add(x, y float64) uint8 {
-	if x+y > 255 {
+func add_little_to_max(prev, now float64) uint8 {
+	return saturating_add(math.Max(prev, now), 0.01*math.Min(prev, now))
+}
+
+func get_max(prev, now float64) uint8 {
+	return uint8(math.Max(prev, now))
+}
+
+func saturating_add(prev, now float64) uint8 {
+	if prev+now > 255 {
 		return 255
 	}
-	return uint8(x + y)
+	return uint8(prev + now)
 }
 
 func xiolin_ipart(x float64) float64 {
