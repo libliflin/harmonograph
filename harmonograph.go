@@ -23,7 +23,7 @@ const (
 )
 
 func main() {
-	http.HandleFunc("/harmonograph.html", servePage("harmonograph.html"))
+	http.HandleFunc("/harmonograph", servePage("harmonograph.html"))
 	http.HandleFunc("/png", serveHarmonograph)
 	log.Fatal(http.ListenAndServe("localhost:8000", nil))
 }
@@ -60,7 +60,7 @@ func serveHarmonograph(w http.ResponseWriter, r *http.Request) {
 func harmonograph(X1, X2, Y1, Y2 func(float64) float64, tmax float64, out io.Writer) {
 	const (
 		res       = 0.001 // angular resolution
-		size      = 100   // image canvas covers [-size..+size]
+		size      = 300   // image canvas covers [-size..+size]
 		alphaStep = 50
 	)
 	rect := image.Rect(0, 0, 2*size+1, 2*size+1)
