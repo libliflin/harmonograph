@@ -9,3 +9,5 @@ Mathematica's "Manipulate[]" as a golang server and mithril website.
 6. run `cd src/github.com/libliflin/harmonograph`
 7. run `dogo`
 8. Open your browser to localhost:8080/harmonograph
+
+![Mel's Harmonograph](mels_harmonograph.png "Example")

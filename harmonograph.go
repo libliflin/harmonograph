@@ -76,11 +76,11 @@ func parametricPlot(X, Y func(float64) float64, tmin, tmax float64, out io.Write
 func makeImage(size int) *image.RGBA {
 	rect := image.Rect(0, 0, 2*size+1, 2*size+1)
 	img := image.NewRGBA(rect)
-	for alx := 0; alx < 2*size+1; alx++ {
-		for aly := 0; aly < 2*size+1; aly++ {
-			img.SetRGBA(alx, aly, color.RGBA{0, 0, 0, 0})
-		}
-	}
+	// for alx := 0; alx < 2*size+1; alx++ {
+	// 	for aly := 0; aly < 2*size+1; aly++ {
+	// 		img.SetRGBA(alx, aly, color.RGBA{0, 0, 0, 0})
+	// 	}
+	// }
 	return img
 }
 
