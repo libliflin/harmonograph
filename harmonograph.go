@@ -12,6 +12,7 @@ import (
 	"math"
 	"net/http"
 	"strconv"
+	"sync"
 )
 
 var palette = []color.Color{color.White, color.Black}
@@ -68,27 +69,97 @@ func harmonograph(X1, X2, Y1, Y2 func(float64) float64, tmax float64, out io.Wri
 		tmax,
 		out)
 }
-
 func parametricPlot(X, Y func(float64) float64, tmin, tmax float64, out io.Writer) {
-	const (
-		size      = 300 // image canvas covers [-size..+size]
-		alphaStep = 50
-	)
+	parallel_parametricPlot_30(X, Y, tmin, tmax, out)
+}
 
+func makeImage(size int) *image.RGBA {
 	rect := image.Rect(0, 0, 2*size+1, 2*size+1)
-	rectSize := 2*size + 1.0
 	img := image.NewRGBA(rect)
 	for alx := 0; alx < 2*size+1; alx++ {
 		for aly := 0; aly < 2*size+1; aly++ {
 			img.SetRGBA(alx, aly, color.RGBA{0, 0, 0, 0})
 		}
 	}
+	return img
+}
+
+func serial_parametricPlot_static(X, Y func(float64) float64, tmin, tmax float64, out io.Writer) {
+	const (
+		size      = 300 // image canvas covers [-size..+size]
+		alphaStep = 50
+	)
+
+	rectSize := 2*size + 1.0
+	img := makeImage(size)
 	prevOutside := true
 	xprev := math.Inf(-1)
 	yprev := math.Inf(-1)
 	resDefault := 0.01
-	allowedDifferenceMax := 2.0        // if two points are farther than allowedDifferenceMax apart, back up with a halved res
-	allowedDifferenceMin := .5         // if two points sare closer than allowedDifferenceMin apart, back up with a doubled res
+	res := resDefault
+	for t := tmin; t < tmax; t += res {
+		x := size + X(t)
+		y := size + Y(t)
+		if x < 0 || rectSize < x || y < 0 || rectSize < y {
+			prevOutside = true
+		}
+		if !prevOutside {
+			xiolin_wu_draw_line(xprev, yprev, x, y, img)
+		}
+		xprev = x
+		yprev = y
+		prevOutside = false
+	}
+	png.Encode(out, img) // NOTE: ignoring encoding errors
+}
+
+func parallel_parametricPlot_30(X, Y func(float64) float64, tmin, tmax float64, out io.Writer) {
+	const (
+		routines  = 30
+		size      = 300 // image canvas covers [-size..+size]
+		alphaStep = 50
+	)
+	img := makeImage(size)
+
+	var wg sync.WaitGroup
+	tstep := (tmax - tmin) / float64(routines)
+	wg.Add(routines)
+	for i := 0; i < routines; i++ {
+		lm := tmin + float64(i)*tstep
+		lx := tmin + float64(i+1)*tstep
+		go func() {
+			defer wg.Done()
+			serial_parametricPlot_write_image(X, Y, lm, lx, img)
+		}()
+	}
+	wg.Wait()
+	png.Encode(out, img) // NOTE: ignoring encoding errors
+}
+
+func serial_parametricPlot(X, Y func(float64) float64, tmin, tmax float64, out io.Writer) {
+	const (
+		size      = 300 // image canvas covers [-size..+size]
+		alphaStep = 50
+	)
+
+	img := makeImage(size)
+	serial_parametricPlot_write_image(X, Y, tmin, tmax, img)
+	png.Encode(out, img) // NOTE: ignoring encoding errors
+}
+
+func serial_parametricPlot_write_image(X, Y func(float64) float64, tmin, tmax float64, img *image.RGBA) {
+	const (
+		size      = 300 // image canvas covers [-size..+size]
+		alphaStep = 50
+	)
+
+	rectSize := 2*size + 1.0
+	prevOutside := true
+	xprev := math.Inf(-1)
+	yprev := math.Inf(-1)
+	resDefault := 0.01
+	allowedDifferenceMax := 2.8        // if two points are farther than allowedDifferenceMax apart, back up with a halved res
+	allowedDifferenceMin := 1.4        // if two points sare closer than allowedDifferenceMin apart, back up with a doubled res
 	allowedDifferenceMultiplier := 2.0 // if we are in a loop of allowed difference, do the max, then continue.
 	allowedDifferenceMaxSet := false
 	allowedDifferenceMinSet := false
@@ -100,6 +171,7 @@ func parametricPlot(X, Y func(float64) float64, tmin, tmax float64, out io.Write
 			prevOutside = true
 		}
 		if !prevOutside {
+			// TODO: MAKE THIS DERIVATIVE BASED!!!!
 			d := distance(xprev, yprev, x, y)
 			if allowedDifferenceMax < d && allowedDifferenceMinSet {
 				//allowedDifferenceMinSet = false
@@ -138,11 +210,11 @@ func parametricPlot(X, Y func(float64) float64, tmin, tmax float64, out io.Write
 		yprev = y
 		prevOutside = false
 	}
-	png.Encode(out, img) // NOTE: ignoring encoding errors
 }
 
-func distance(x1, y1, x2, y2 float64) float64 {
-	return math.Sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2))
+func distance(x0, y0, x1, y1 float64) float64 {
+	return math.Max(math.Abs(x1-x0), math.Abs(y1-y0))
+	//return math.Sqrt((x1-x0)*(x1-x0) + (y1-y0)*(y1-y0))
 }
 
 func dampedPendulum(frequency, phase, amplitude, damping float64) func(time float64) float64 {
@@ -153,6 +225,86 @@ func dampedPendulum(frequency, phase, amplitude, damping float64) func(time floa
 		d := damping
 		t := time
 		return A * math.Sin(t*f+p) * math.Exp(-1*d*t)
+	}
+}
+
+func stack_overflow_parametricPlot(X, Y func(float64) float64, tmin, tmax float64, out io.Writer) {
+	const (
+		size      = 300 // image canvas covers [-size..+size]
+		alphaStep = 50
+	)
+
+	rectSize := 2*size + 1.0
+	img := makeImage(size)
+	var wg sync.WaitGroup
+	pp := ParametricPlot{X, Y, tmin, tmax, img, size, rectSize, wg}
+	wg.Add(1)
+	pp.par_recur_parametric_plot(tmin, tmax, pp.eX(tmin), pp.eY(tmin), pp.eX(tmax), pp.eY(tmax))
+	wg.Wait()
+	png.Encode(out, img) // NOTE: ignoring encoding errors
+}
+
+type ParametricPlot struct {
+	X, Y       func(float64) float64
+	tmin, tmax float64
+	img        *image.RGBA
+	size       float64
+	rectSize   float64
+	wg         sync.WaitGroup
+}
+
+func (pp *ParametricPlot) eX(t float64) float64 {
+	return pp.size + pp.X(t)
+}
+
+func (pp *ParametricPlot) eY(t float64) float64 {
+	return pp.size + pp.Y(t)
+}
+
+const (
+	allowedDifferenceMax     = 3.0
+	allowedTimeDifferenceMax = 0.1
+)
+
+// lx >= lm
+func (pp *ParametricPlot) par_recur_parametric_plot(
+	lm,
+	lx,
+	x0,
+	y0,
+	x1,
+	y1 float64) {
+	defer pp.wg.Done()
+	recurse := false
+	if (lx - lm) > allowedTimeDifferenceMax {
+		// too much time, recurse to lower time
+		recurse = true
+	}
+	if math.Abs(x1-x0) > allowedDifferenceMax {
+		// too much X diff, recurse
+		recurse = true
+	}
+	if math.Abs(y1-y0) > allowedDifferenceMax {
+		// too much Y diff, recurse
+		recurse = true
+	}
+	if recurse {
+		bt := lm + ((lx - lm) / 2.0)
+		bx := pp.eX(bt)
+		by := pp.eY(bt)
+		pp.wg.Add(2)
+		pp.par_recur_parametric_plot(lm, bt, x0, x1, bx, by)
+		pp.par_recur_parametric_plot(bt, lx, bx, by, x1, y1)
+		return
+	} else {
+		// make sure we are in bounds.
+		if 0.0 <= x0 && x0 < pp.rectSize &&
+			0.0 <= y0 && y0 < pp.rectSize &&
+			0.0 <= x1 && x1 < pp.rectSize &&
+			0.0 <= y1 && y1 < pp.rectSize {
+			xiolin_wu_draw_line(x0, y0, x1, y1, pp.img)
+
+		}
 	}
 }
 
